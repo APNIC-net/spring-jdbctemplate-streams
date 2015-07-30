@@ -5,6 +5,7 @@ import org.springframework.jdbc.InvalidResultSetAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.ResultSetWrappingSqlRowSet;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
@@ -25,9 +26,9 @@ public class JdbcStream {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public <T> Stream<T> queryForStream(String sql, RowMapper<T> mapper, Object... args) {
+    public <T> Stream<T> queryForStream(String sql, SqlRowMapper<T> mapper, Object... args) {
         Supplier<Spliterator<T>> supplier = () -> {
-            ResultSetWrappingSqlRowSet rowSet = (ResultSetWrappingSqlRowSet)jdbcTemplate.queryForRowSet(sql, args);
+            SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, args);
             return Spliterators.<T>spliteratorUnknownSize(new Iterator<T>() {
                 @Override
                 public boolean hasNext() {
@@ -39,14 +40,14 @@ public class JdbcStream {
                     if (!rowSet.next()) {
                         throw new NoSuchElementException();
                     }
-                    try {
-                        return mapper.mapRow(rowSet.getResultSet(), rowSet.getRow());
-                    } catch (SQLException ex) {
-                        throw new InvalidResultSetAccessException(ex);
-                    }
+                    return mapper.mapRow(rowSet, rowSet.getRow());
                 }
             }, Spliterator.IMMUTABLE);
         };
         return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false);
+    }
+
+    public interface SqlRowMapper<T> {
+        T mapRow(SqlRowSet row, int rowNumber);
     }
 }
