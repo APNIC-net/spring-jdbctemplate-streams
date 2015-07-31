@@ -30,7 +30,7 @@ public class JdbcStream extends JdbcTemplate {
         super(dataSource);
     }
 
-    public StreamableQuery streamableQuery(String sql, Object ...args) throws SQLException {
+    public StreamableQuery streamableQuery(String sql, Object... args) throws SQLException {
         Connection connection = DataSourceUtils.getConnection(getDataSource());
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
         newArgPreparedStatementSetter(args).setValues(preparedStatement);
@@ -65,7 +65,9 @@ public class JdbcStream extends JdbcTemplate {
                 }
             }, Spliterator.IMMUTABLE);
             return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false);
-        };
+        }
+
+        ;
 
         @Override
         public void close() throws IOException {
@@ -79,11 +81,13 @@ public class JdbcStream extends JdbcTemplate {
     public interface SqlRow {
         //TODO - implement remainting getters
         Long getLong(String columnLabel);
+
         String getString(String columnLabel);
+
         Timestamp getTimestamp(String columnLabel);
     }
 
-    public class SqlRowAdapter implements SqlRow{
+    public class SqlRowAdapter implements SqlRow {
         private final SqlRowSet sqlRowSet;
 
         public SqlRowAdapter(SqlRowSet sqlRowSet) {
@@ -104,4 +108,5 @@ public class JdbcStream extends JdbcTemplate {
         public Timestamp getTimestamp(String columnLabel) {
             return sqlRowSet.getTimestamp(columnLabel);
         }
-    };
+    }
+}

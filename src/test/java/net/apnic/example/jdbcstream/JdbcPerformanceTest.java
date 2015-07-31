@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -51,9 +52,13 @@ public class JdbcPerformanceTest {
     }
 
     @Test
-    public void streamsData() {
+    public void streamsData() throws SQLException, IOException {
         final Counter counter = new Counter();
-        logger.info("Queried records: " + jdbcStream.queryForStream("SELECT * FROM test_data", (row, rownum) -> row.getString("entry")).collect(Collectors.counting()));
+        try (JdbcStream.StreamableQuery query = jdbcStream.streamableQuery("SELECT * FROM test_data")) {
+            logger.info("Queried streaming records: " + query.stream()
+                    .map(row -> row.getString("entry"))
+                    .collect(Collectors.counting()));
+        }
     }
 
     @Test
@@ -66,7 +71,7 @@ public class JdbcPerformanceTest {
                 counter.value++;
             }
         });
-        logger.info("Queried records: " + counter.value);
+        logger.info("Queried callback records: " + counter.value);
     }
 
     static class Counter{
