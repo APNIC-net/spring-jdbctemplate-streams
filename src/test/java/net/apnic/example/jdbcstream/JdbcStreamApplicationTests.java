@@ -24,7 +24,7 @@ public class JdbcStreamApplicationTests {
 
 	@Test
 	public void streamsData() {
-        Set<String> results = jdbcStream.queryForStream("SELECT * FROM test_data").map((row) -> row.getString("entry"))
+        Set<String> results = jdbcStream.queryForStream("SELECT * FROM test_data", (row, idx) -> row.getString(1))
                 .filter(s -> Character.isAlphabetic(s.charAt(0)))
                 .collect(Collectors.toSet());
 

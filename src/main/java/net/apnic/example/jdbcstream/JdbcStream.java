@@ -9,7 +9,6 @@ import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
@@ -27,59 +26,28 @@ public class JdbcStream {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public Stream<SqlRow> queryForStream(String sql, Object... args) {
-        Supplier<Spliterator<SqlRow>> supplier = () -> {
+    public <T> Stream<T> queryForStream(String sql, SqlRowMapper<T> mapper, Object... args) {
+        Supplier<Spliterator<T>> supplier = () -> {
             SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, args);
-            SqlRow row = new SqlRowAdapter(rowSet);
-            return Spliterators.<SqlRow>spliteratorUnknownSize(new Iterator<SqlRow>() {
+            return Spliterators.<T>spliteratorUnknownSize(new Iterator<T>() {
                 @Override
                 public boolean hasNext() {
                     return !rowSet.isLast();
                 }
 
                 @Override
-                public SqlRow next() {
+                public T next() {
                     if (!rowSet.next()) {
                         throw new NoSuchElementException();
                     }
-                    return row;
+                    return mapper.mapRow(rowSet, rowSet.getRow());
                 }
             }, Spliterator.IMMUTABLE);
         };
-        boolean parallel = false;
-        return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, parallel);
+        return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false);
     }
 
-    /**
-     * Facade to hide the cursor movement methods of an SqlRowSet
-     */
-    public interface SqlRow {
-        //TODO - implement remainting getters
-        Long getLong(String columnLabel);
-        String getString(String columnLabel);
-        Timestamp getTimestamp(String columnLabel);
-    }
-
-    public class SqlRowAdapter implements SqlRow{
-        private final SqlRowSet sqlRowSet;
-
-        public SqlRowAdapter(SqlRowSet sqlRowSet) {
-            this.sqlRowSet = sqlRowSet;
-        }
-
-        @Override
-        public Long getLong(String columnLabel) {
-            return sqlRowSet.getLong(columnLabel);
-        }
-
-        @Override
-        public String getString(String columnLabel) {
-            return sqlRowSet.getString(columnLabel);
-        }
-
-        @Override
-        public Timestamp getTimestamp(String columnLabel) {
-            return sqlRowSet.getTimestamp(columnLabel);
-        }
+    public interface SqlRowMapper<T> {
+        T mapRow(SqlRowSet row, int rowNumber);
     }
 }
