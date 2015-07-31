@@ -104,5 +104,4 @@ public class JdbcStream extends JdbcTemplate {
         public Timestamp getTimestamp(String columnLabel) {
             return sqlRowSet.getTimestamp(columnLabel);
         }
-    }
-}
+    };
