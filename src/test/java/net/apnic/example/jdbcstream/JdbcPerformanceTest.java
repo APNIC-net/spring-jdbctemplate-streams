@@ -53,7 +53,6 @@ public class JdbcPerformanceTest {
 
     @Test
     public void streamsData() throws SQLException, IOException {
-        final Counter counter = new Counter();
         try (JdbcStream.StreamableQuery query = jdbcStream.streamableQuery("SELECT * FROM test_data")) {
             logger.info("Queried streaming records: " + query.stream()
                     .map(row -> row.getString("entry"))
