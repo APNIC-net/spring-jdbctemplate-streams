@@ -1,13 +1,17 @@
 package net.apnic.example.jdbcstream;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.InvalidResultSetAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.rowset.ResultSetWrappingSqlRowSet;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
+import java.io.Closeable;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Iterator;
@@ -19,19 +23,34 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @Component
-public class JdbcStream {
-    private final JdbcTemplate jdbcTemplate;
+public class JdbcStream extends JdbcTemplate {
 
     @Autowired
-    public JdbcStream(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public JdbcStream(DataSource dataSource) {
+        super(dataSource);
     }
 
-    public Stream<SqlRow> queryForStream(String sql, Object... args) {
-        Supplier<Spliterator<SqlRow>> supplier = () -> {
-            SqlRowSet rowSet = jdbcTemplate.queryForRowSet(sql, args);
-            SqlRow row = new SqlRowAdapter(rowSet);
-            return Spliterators.<SqlRow>spliteratorUnknownSize(new Iterator<SqlRow>() {
+    public StreamableQuery streamableQuery(String sql, Object ...args) throws SQLException {
+        Connection connection = DataSourceUtils.getConnection(getDataSource());
+        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        newArgPreparedStatementSetter(args).setValues(preparedStatement);
+        return new StreamableQuery(connection, preparedStatement);
+    }
+
+    public class StreamableQuery implements Closeable {
+        private final Connection connection;
+        private final PreparedStatement preparedStatement;
+
+        private StreamableQuery(Connection connection, PreparedStatement preparedStatement) {
+            this.connection = connection;
+            this.preparedStatement = preparedStatement;
+        }
+
+        public Stream<SqlRow> stream() throws SQLException {
+            final SqlRowSet rowSet = new ResultSetWrappingSqlRowSet(preparedStatement.executeQuery());
+            final SqlRow sqlRow = new SqlRowAdapter(rowSet);
+
+            Supplier<Spliterator<SqlRow>> supplier = () -> Spliterators.spliteratorUnknownSize(new Iterator<SqlRow>() {
                 @Override
                 public boolean hasNext() {
                     return !rowSet.isLast();
@@ -42,12 +61,16 @@ public class JdbcStream {
                     if (!rowSet.next()) {
                         throw new NoSuchElementException();
                     }
-                    return row;
+                    return sqlRow;
                 }
             }, Spliterator.IMMUTABLE);
+            return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false);
         };
-        boolean parallel = false;
-        return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, parallel);
+
+        @Override
+        public void close() throws IOException {
+            DataSourceUtils.releaseConnection(connection, getDataSource());
+        }
     }
 
     /**

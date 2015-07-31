@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,12 +25,15 @@ public class JdbcStreamApplicationTests {
 	}
 
 	@Test
-	public void streamsData() {
-        Set<String> results = jdbcStream.queryForStream("SELECT * FROM test_data").map((row) -> row.getString("entry"))
-                .filter(s -> Character.isAlphabetic(s.charAt(0)))
-                .collect(Collectors.toSet());
+	public void streamsData() throws SQLException, IOException {
+        try (JdbcStream.StreamableQuery query = jdbcStream.streamableQuery("SELECT * FROM test_data")) {
+            Set<String> results = query.stream()
+                    .map(row -> row.getString("entry"))
+                    .filter(s -> Character.isAlphabetic(s.charAt(0)))
+                    .collect(Collectors.toSet());
 
-        assertThat("3 results start with an alphabetic character", results.size(), is(equalTo(3)));
+            assertThat("3 results start with an alphabetic character", results.size(), is(equalTo(3)));
+        }
     }
 
 }
