@@ -9,6 +9,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -34,6 +35,16 @@ public class JdbcStreamApplicationTests {
 
             assertThat("3 results start with an alphabetic character", results.size(), is(equalTo(3)));
         }
+    }
+
+    @Test
+    public void callbackStreaming() {
+        Set<String> results = jdbcStream.streamQuery("SELECT * FROM test_data", stream -> stream
+            .map(row -> row.getString("entry"))
+            .filter(s -> Character.isAlphabetic(s.charAt(0)))
+            .collect(Collectors.toSet()));
+
+        assertThat("3 results start with an alphabetic character", results.size(), is(equalTo(3)));
     }
 
 }

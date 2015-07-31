@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -30,7 +31,31 @@ public class JdbcStream extends JdbcTemplate {
         super(dataSource);
     }
 
-    public StreamableQuery streamableQuery(String sql, Object ...args) throws SQLException {
+    public <T> T streamQuery(String sql, Function<Stream<SqlRow>, ? extends T> streamer, Object... args) {
+        return query(sql, resultSet -> {
+            final SqlRowSet rowSet = new ResultSetWrappingSqlRowSet(resultSet);
+            final SqlRow sqlRow = new SqlRowAdapter(rowSet);
+
+            Supplier<Spliterator<SqlRow>> supplier = () -> Spliterators.spliteratorUnknownSize(new Iterator<SqlRow>() {
+                @Override
+                public boolean hasNext() {
+                    return !rowSet.isLast();
+                }
+
+                @Override
+                public SqlRow next() {
+                    if (!rowSet.next()) {
+                        throw new NoSuchElementException();
+                    }
+                    return sqlRow;
+                }
+            }, Spliterator.IMMUTABLE);
+            return streamer.apply(StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false));
+
+        }, args);
+    }
+
+    public StreamableQuery streamableQuery(String sql, Object... args) throws SQLException {
         Connection connection = DataSourceUtils.getConnection(getDataSource());
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
         newArgPreparedStatementSetter(args).setValues(preparedStatement);
