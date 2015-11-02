@@ -2,6 +2,7 @@ package net.apnic.example.jdbcstream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -9,18 +10,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
-import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
+import org.springframework.test.context.support.DirtiesContextTestExecutionListener;
+import org.springframework.test.context.transaction.TransactionalTestExecutionListener;
 
 import java.io.IOException;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = JdbcStreamApplication.class)
+@TestExecutionListeners(listeners = { DependencyInjectionTestExecutionListener.class,
+        DirtiesContextTestExecutionListener.class, TransactionalTestExecutionListener.class })
 public class JdbcPerformanceTest {
     protected final Log logger = LogFactory.getLog(JdbcPerformanceTest.class);
 
@@ -41,6 +46,8 @@ public class JdbcPerformanceTest {
             }
         };
 
+        jdbcTemplate.batchUpdate("DELETE FROM test_data");
+
         int batchSize = 10000;
         for(int i=0; i< 5; i++) {
             jdbcTemplate.batchUpdate("INSERT INTO test_data (entry) VALUES (?)",
@@ -49,6 +56,12 @@ public class JdbcPerformanceTest {
         }
 
         logger.info("test data populated");
+    }
+
+    @After
+    public void cleanUp() {
+        logger.info("cleaning up database");
+        jdbcTemplate.batchUpdate("DELETE FROM test_data");
     }
 
     @Test

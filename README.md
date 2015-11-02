@@ -1,5 +1,7 @@
 # Spring JdbcTemplate with Java 8 Streams
 
+[![Build Status](https://travis-ci.org/APNIC-net/spring-jdbctemplate-streams.svg?branch=master)](https://travis-ci.org/APNIC-net/spring-jdbctemplate-streams)
+
 This repository contains example code for how one might use Spring's
 [JdbcTemplate] with the Java 8 [Stream] API.
 
