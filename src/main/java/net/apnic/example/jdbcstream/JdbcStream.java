@@ -90,7 +90,9 @@ public class JdbcStream extends JdbcTemplate {
                 }
             }, Spliterator.IMMUTABLE);
             return StreamSupport.stream(supplier, Spliterator.IMMUTABLE, false);
-        };
+        }
+
+        ;
 
         @Override
         public void close() throws IOException {
@@ -104,11 +106,13 @@ public class JdbcStream extends JdbcTemplate {
     public interface SqlRow {
         //TODO - implement remainting getters
         Long getLong(String columnLabel);
+
         String getString(String columnLabel);
+
         Timestamp getTimestamp(String columnLabel);
     }
 
-    public class SqlRowAdapter implements SqlRow{
+    public class SqlRowAdapter implements SqlRow {
         private final SqlRowSet sqlRowSet;
 
         public SqlRowAdapter(SqlRowSet sqlRowSet) {
