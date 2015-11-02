@@ -63,12 +63,9 @@ public class JdbcPerformanceTest {
     @Test
     public void callbackData(){
         final Counter counter = new Counter();
-        jdbcTemplate.query("SELECT * FROM test_data", new RowCallbackHandler() {
-            @Override
-            public void processRow(ResultSet resultSet) throws SQLException {
-                String s = resultSet.getString("entry");
-                counter.value++;
-            }
+        jdbcTemplate.query("SELECT * FROM test_data", resultSet -> {
+            String s = resultSet.getString("entry");
+            counter.value++;
         });
         logger.info("Queried callback records: " + counter.value);
     }
