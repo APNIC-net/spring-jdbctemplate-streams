@@ -104,7 +104,7 @@ public class JdbcStream extends JdbcTemplate {
      * Facade to hide the cursor movement methods of an SqlRowSet
      */
     public interface SqlRow {
-        //TODO - implement remainting getters
+        //TODO - implement remaining getters
         Long getLong(String columnLabel);
 
         String getString(String columnLabel);
