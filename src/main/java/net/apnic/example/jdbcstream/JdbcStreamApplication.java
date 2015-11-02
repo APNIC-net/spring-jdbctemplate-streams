@@ -57,7 +57,13 @@ public class JdbcStreamApplication implements EmbeddedDatabaseConfigurer {
                 return jdbcTemplate.query(sql, resultSet -> {
                     final SqlRowSet rowSet = new ResultSetWrappingSqlRowSet(resultSet);
 
+                    if (!rowSet.next()) {
+                        return streamer.apply(StreamSupport.stream(Spliterators.emptySpliterator(),
+                                IsParallel.PARALLEL.getFlag()));
+                    }
+
                     Spliterator<SqlRowSet> spliterator = Spliterators.spliteratorUnknownSize(new Iterator<SqlRowSet>() {
+                        private boolean first = true;
                         @Override
                         public boolean hasNext() {
                             return !rowSet.isLast();
@@ -65,9 +71,10 @@ public class JdbcStreamApplication implements EmbeddedDatabaseConfigurer {
 
                         @Override
                         public SqlRowSet next() {
-                            if (!rowSet.next()) {
+                            if (!first || !rowSet.next()) {
                                 throw new NoSuchElementException();
                             }
+                            first = false;
                             return rowSet;
                         }
                     }, Spliterator.IMMUTABLE);

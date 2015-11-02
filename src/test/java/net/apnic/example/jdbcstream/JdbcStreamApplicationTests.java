@@ -4,6 +4,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.sql.SQLException;
 import java.util.Set;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 import static org.hamcrest.Matchers.*;
@@ -21,9 +23,18 @@ public class JdbcStreamApplicationTests {
     @Autowired
     JdbcStream jdbcStream;
 
+    @Autowired
+    JdbcStreamApplication.QueryStream queryStream;
+
 	@Test
 	public void contextLoads() {
 	}
+
+    private Set<String> streamData(Stream<SqlRowSet> stream) {
+        return stream.map(row -> row.getString("entry"))
+                .filter(s -> Character.isAlphabetic(s.charAt(0)))
+                .collect(Collectors.toSet());
+    }
 
 	@Test
 	public void streamsData() throws SQLException, IOException {
@@ -35,6 +46,13 @@ public class JdbcStreamApplicationTests {
 
             assertThat("3 results start with an alphabetic character", results.size(), is(equalTo(3)));
         }
+    }
+
+    @Test
+    public void streamsEmptyData() {
+        Set<String> results = queryStream.streamQuery("SELECT * FROM test_data WHERE entry IS NULL",
+                this::streamData);
+        assertThat("A query with no results produces an empty set", results, is(empty()));
     }
 
     @Test
